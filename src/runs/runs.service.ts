@@ -1,0 +1,24 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { FinishRunDto } from './dto/finish-run.dto';
+
+@Injectable()
+export class RunsService {
+
+    constructor(private readonly _prisma: PrismaService) {}
+
+    async finishRun(dto: FinishRunDto) {
+        var run = await this._prisma.run.create({
+            data: {
+                walletAddress: dto.walletAddress,
+                score: dto.score,
+            },
+        });
+
+        return {
+            id: run.id,
+            score: run.score,
+            createdAt: run.createdAt,
+        };
+    }
+}
