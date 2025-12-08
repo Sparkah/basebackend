@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { RunsService } from './runs.service';
 import { FinishRunDto } from './dto/finish-run.dto';
 
@@ -16,5 +16,10 @@ export class RunsController {
             walletAddress: body.walletAddress || 'anonymous',
             score: score,
         });
+    }
+
+    @Get('all')
+    async getAllRuns() {
+        return this._runsService.getAllRuns();
     }
 }

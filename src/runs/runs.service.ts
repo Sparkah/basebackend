@@ -21,4 +21,20 @@ export class RunsService {
             createdAt: run.createdAt,
         };
     }
+
+    async getAllRuns() {
+        var runs = await this._prisma.run.findMany({
+            orderBy: {
+                score: 'desc',
+            },
+            take: 100,
+        });
+
+        return runs.map(run => ({
+            id: run.id,
+            walletAddress: run.walletAddress,
+            score: run.score,
+            createdAt: run.createdAt,
+        }));
+    }
 }
