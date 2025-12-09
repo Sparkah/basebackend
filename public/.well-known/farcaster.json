@@ -11,10 +11,10 @@
     "version": "1",
     "name": "Example Mini App",
     "homeUrl": "https://basebackend-production-f4f9.up.railway.app/index.html",
-    "iconUrl": "https://raw.githubusercontent.com/Sparkah/AudioHoster/refs/heads/main/Choco_Factory.png?token=GHSAT0AAAAAADP57TN3TIPL3KSYIX4ANGOE2JYH6GA",
+    "iconUrl": "https://ex.co/i.png",
     "splashImageUrl": "https://ex.co/l.png",
     "splashBackgroundColor": "#000000",
-    "webhookUrl": "",
+    "webhookUrl": "https://ex.co/api/webhook",
     "subtitle": "Fast, fun, social",
     "description": "A fast, fun way to challenge friends in real time.",
     "screenshotUrls": [
