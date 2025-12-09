@@ -7,16 +7,27 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RunsModule } from './runs/runs.module';
 import { RunsController } from './runs/runs.controller';
 import { RunsService } from './runs/runs.service';
+import { AuthController } from './auth/auth.controller';
+import { AuthService } from './auth/auth.service';
+import { AuthModule } from './auth/auth.module';
+import { WellKnownModule } from './.well-known/.well-known.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public')
+    }),
     PrismaModule,
     RunsModule,
+    AuthModule,
+    WellKnownModule,
   ],
-  controllers: [AppController, RunsController],
-  providers: [AppService, PrismaService, RunsService],
+  controllers: [AppController, RunsController, AuthController],
+  providers: [AppService, PrismaService, RunsService, AuthService],
 })
 export class AppModule { }

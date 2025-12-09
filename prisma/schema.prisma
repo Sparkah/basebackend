@@ -7,6 +7,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model User {
+  id            Int      @id @default(autoincrement())
+  walletAddress String   @unique
+  createdAt     DateTime @default(now())
+  // add more fields later (upgrades, coins, etc.)
+}
+
 model Run {
   id            Int      @id @default(autoincrement())
   walletAddress String
