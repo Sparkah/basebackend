@@ -10,6 +10,7 @@ import { RunsService } from './runs/runs.service';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { AuthModule } from './auth/auth.module';
+import { ManifestController } from './manifest/manifest.controller';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -19,13 +20,15 @@ import { join } from 'path';
       isGlobal: true,
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public')
+      // This points to the public folder in your project root
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/',
     }),
     PrismaModule,
     RunsModule,
     AuthModule,
   ],
-  controllers: [AppController, RunsController, AuthController],
+  controllers: [AppController, RunsController, AuthController, ManifestController],
   providers: [AppService, PrismaService, RunsService, AuthService],
 })
 export class AppModule { }
