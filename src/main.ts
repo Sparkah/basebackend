@@ -1,12 +1,12 @@
-/*import { NestFactory } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();*/
-
+bootstrap();
+/*
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { join } from 'path';
@@ -17,4 +17,4 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'public'));
   await app.listen(process.env.PORT || 3000);
 }
-bootstrap();
+bootstrap();*/
