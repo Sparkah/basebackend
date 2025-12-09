@@ -10,7 +10,6 @@ import { RunsService } from './runs/runs.service';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { AuthModule } from './auth/auth.module';
-import { WellKnownModule } from './.well-known/.well-known.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -25,7 +24,6 @@ import { join } from 'path';
     PrismaModule,
     RunsModule,
     AuthModule,
-    WellKnownModule,
   ],
   controllers: [AppController, RunsController, AuthController],
   providers: [AppService, PrismaService, RunsService, AuthService],
