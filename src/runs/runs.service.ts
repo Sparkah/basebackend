@@ -1,43 +1,38 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { FinishRunDto } from './dto/finish-run.dto';
 
 @Injectable()
 export class RunsService {
+  constructor(private prisma: PrismaService) {}
 
-    constructor(private readonly _prisma: PrismaService) {}
+  async finishRun(data: { fid: number; score: number }) {
+    const userExists = await this.prisma.user.findUnique({
+      where: { fid: data.fid }
+    });
 
-    async finishRun(dto: FinishRunDto) {
-        var run = await this._prisma.run.create({
-            data: {
-                score: dto.score,
-                user: {
-                    connect: {
-                        id: dto.userId,
-                    },
-                },
-            },
-        });
-
-        return {
-            id: run.id,
-            score: run.score,
-            createdAt: run.createdAt,
-        };
+    if (!userExists) {
+      throw new Error(`User with FID ${data.fid} not found. Did they login?`);
     }
 
-    async getAllRuns() {
-        var runs = await this._prisma.run.findMany({
-            orderBy: {
-                score: 'desc',
-            },
-            take: 100,
-        });
+    return this.prisma.run.create({
+      data: {
+        score: data.score,
+        user: {
+          connect: { fid: data.fid } 
+        }
+      },
+    });
+  }
 
-        return runs.map(run => ({
-            id: run.id,
-            score: run.score,
-            createdAt: run.createdAt,
-        }));
-    }
+  async getAllRuns() {
+    return this.prisma.run.findMany({
+      take: 50,
+      orderBy: { score: 'desc' },
+      include: {
+        user: {
+          select: { username: true, fid: true }
+        }
+      }
+    });
+  }
 }
