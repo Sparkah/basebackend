@@ -10,8 +10,12 @@ export class RunsService {
     async finishRun(dto: FinishRunDto) {
         var run = await this._prisma.run.create({
             data: {
-                walletAddress: dto.walletAddress,
                 score: dto.score,
+                user: {
+                    connect: {
+                        id: dto.userId,
+                    },
+                },
             },
         });
 
@@ -32,7 +36,6 @@ export class RunsService {
 
         return runs.map(run => ({
             id: run.id,
-            walletAddress: run.walletAddress,
             score: run.score,
             createdAt: run.createdAt,
         }));

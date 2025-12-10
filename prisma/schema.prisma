@@ -9,14 +9,23 @@ generator client {
 
 model User {
   id            Int      @id @default(autoincrement())
-  walletAddress String   @unique
+  fid           Int      @unique          // This is the new main ID
+  username      String?                   // Store their Farcaster handle
+  displayName   String?
+  pfpUrl        String?
+  walletAddress String?  @unique          // Make this Optional (?)
   createdAt     DateTime @default(now())
-  // add more fields later (upgrades, coins, etc.)
+  runs          Run[]                     // Relation to runs
+  critUpgrades  Int
+  valueUpgrades Int
+  currCoins     Int
+  ltimeCoins    Int
 }
 
 model Run {
-  id            Int      @id @default(autoincrement())
-  walletAddress String
-  score         Int
-  createdAt     DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  score     Int
+  userId    Int      // Link to User ID instead of wallet string
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }

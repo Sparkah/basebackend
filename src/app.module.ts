@@ -13,6 +13,9 @@ import { AuthModule } from './auth/auth.module';
 import { ManifestController } from './manifest/manifest.controller';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { UsersController } from './users/users.controller';
+import { UsersService } from './users/users.service';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -31,8 +34,9 @@ import { join } from 'path';
     PrismaModule,
     RunsModule,
     AuthModule,
+    UsersModule,
   ],
-  controllers: [AppController, RunsController, AuthController, ManifestController],
-  providers: [AppService, PrismaService, RunsService, AuthService],
+  controllers: [AppController, RunsController, AuthController, ManifestController, UsersController],
+  providers: [AppService, PrismaService, RunsService, AuthService, UsersService],
 })
 export class AppModule { }

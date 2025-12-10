@@ -1,19 +1,19 @@
-import { Controller, Get, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly auth: AuthService) { }
+    constructor(private readonly authService: AuthService) { }
 
     @Get('nonce')
     getNonce() {
-        return { nonce: this.auth.generateNonce() };
+        return { nonce: this.authService.generateNonce() };
     }
 
-    @Post('verify')
-    async verify(@Body() body: { address: string; message: string; signature: string }) {
-        const { address, message, signature } = body;
-        const jwt = await this.auth.verifyAndGetToken(address, message, signature);
-        return { token: jwt };
+    @Post('login')
+    async login(@Body() body: { message: string; signature: string; nonce: string }) {
+        return {
+            accessToken: await this.authService.verifyFarcasterLogin(body)
+        };
     }
 }

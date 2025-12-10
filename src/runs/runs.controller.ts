@@ -15,6 +15,7 @@ export class RunsController {
         return this._runsService.finishRun({
             walletAddress: body.walletAddress || 'anonymous',
             score: score,
+            userId: body.userId,
         });
     }
 
