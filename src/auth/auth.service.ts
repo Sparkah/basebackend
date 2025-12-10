@@ -1,31 +1,39 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-// If '@farcaster/auth-client' exports AppClient as a default or named value, use the correct import:
-//import { AppClient } from '@farcaster/auth-client';
-// If this still fails, try importing as follows (uncomment the correct one):
-
-// import AppClient from '@farcaster/auth-client';
-// or
-const { AppClient } = require('@farcaster/auth-client');
 import * as crypto from 'crypto';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
     private nonces = new Set<string>();
     private JWT_SECRET = process.env.JWT_SECRET || 'hackathon-secret';
-
-    // ✅ Initialize Farcaster Client (relayUrl is standard)
-    private farcasterClient = new AppClient({
-        relayUrl: 'https://relay.farcaster.xyz',
-        domain: 'basebackend-production-f4f9.up.railway.app' // ✅ Matches your public domain
-    });
+    private farcasterClient: any;
 
     constructor(private prisma: PrismaService) { }
 
+    async onModuleInit() {
+        // 1. Import as 'any' to bypass TS checks
+        const imported = await import('@farcaster/auth-client') as any;
+
+        // 2. Extract the factory function
+        // The logs showed 'createAppClient' exists in the exports
+        const createAppClient = imported.createAppClient;
+
+        if (!createAppClient) {
+            throw new Error("Could not find createAppClient function.");
+        }
+
+        // 3. ✅ Use the factory function instead of 'new AppClient()'
+        this.farcasterClient = createAppClient({
+            relayUrl: 'https://relay.farcaster.xyz',
+            domain: 'basebackend-production-f4f9.up.railway.app'
+        });
+
+        console.log("✅ Farcaster Client Initialized Successfully");
+    }
+
     generateNonce(): string {
         const nonce = crypto.randomBytes(16).toString('hex');
-        // Store nonce with timestamp to clean up later if needed
         this.nonces.add(nonce);
         return nonce;
     }
@@ -33,18 +41,20 @@ export class AuthService {
     async verifyFarcasterLogin(payload: { message: string, signature: string, nonce: string }): Promise<string> {
         const { message, signature, nonce } = payload;
 
-        // 1. Verify Nonce (Prevent Replay Attacks)
+        // Ensure client is loaded
+        if (!this.farcasterClient) {
+            await this.onModuleInit();
+        }
+
         if (!this.nonces.has(nonce)) {
             throw new HttpException('Invalid or expired nonce', HttpStatus.BAD_REQUEST);
         }
         this.nonces.delete(nonce);
 
-        // 2. Verify Farcaster Signature
-        // This checks if the signature is valid and returns the user's FID
         const { success, fid, isError, error } = await this.farcasterClient.verifySignInMessage({
             message,
             signature,
-            domain: 'basebackend-production-f4f9.up.railway.app', // Must match frontend domain
+            domain: 'basebackend-production-f4f9.up.railway.app',
             nonce,
         });
 
@@ -53,15 +63,12 @@ export class AuthService {
             throw new HttpException(`Invalid login: ${error?.message}`, HttpStatus.UNAUTHORIZED);
         }
 
-        // 3. Create or Update User using FID (Not Wallet)
-        // We use 'upsert' to register them if it's their first time
         const user = await this.prisma.user.upsert({
-            where: { fid }, 
-            update: {},  
+            where: { fid },
+            update: {},
             create: {
-                //id: id,
                 fid: fid,
-                username: 'user_${fid}',
+                username: `user_${fid}`,
                 displayName: null,
                 pfpUrl: null,
                 walletAddress: null,
@@ -72,13 +79,8 @@ export class AuthService {
             }
         });
 
-        // 4. Return your App's Session Token (JWT)
-        // The frontend will use THIS token for all future requests (Runs, Upgrades)
         return jwt.sign(
-            {
-                userId: user.id, // Database ID
-                fid: user.fid
-            },
+            { userId: user.id, fid: user.fid },
             this.JWT_SECRET,
             { expiresIn: '7d' }
         );
