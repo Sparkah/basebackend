@@ -32,6 +32,36 @@ export class AuthService implements OnModuleInit {
         console.log("✅ Farcaster Client Initialized Successfully");
     }
 
+    async loginSilent(data: { fid: number; username?: string; displayName?: string; pfpUrl?: string }) {
+        // 1. Upsert the user based on FID
+        const user = await this.prisma.user.upsert({
+            where: { fid: data.fid },
+            update: {
+                // Update profile info in case they changed it
+                username: data.username,
+                displayName: data.displayName,
+                pfpUrl: data.pfpUrl
+            },
+            create: {
+                fid: data.fid,
+                username: data.username || `user_${data.fid}`,
+                displayName: data.displayName,
+                pfpUrl: data.pfpUrl,
+                currCoins: 0,
+                ltimeCoins: 0,
+                valueUpgrades: 0,
+                critUpgrades: 0
+            }
+        });
+
+        // 2. Generate Session Token
+        return jwt.sign(
+            { userId: user.id, fid: user.fid },
+            this.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+    }
+
     generateNonce(): string {
         const nonce = crypto.randomBytes(16).toString('hex');
         this.nonces.add(nonce);
