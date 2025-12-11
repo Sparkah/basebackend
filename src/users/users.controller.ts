@@ -6,7 +6,7 @@ import { UsersService } from './users.service';
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
-    @Get('profile')
+    @Get('profile') // coins, upgrades
     async getProfile(@Req() req) {
         const userId = req.user.id;
         return await this.usersService.findUserById(userId);
