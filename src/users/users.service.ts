@@ -16,7 +16,7 @@ export class UsersService {
 
         return {
             id: user.id,
-            walletAddress: user.walletAddress,
+            walletAddress: user.walletAddress || 'No Wallet Linked',
             coins: user.currCoins || 0,
             valueUpgrades: user.valueUpgrades || 1,
             critUpgrades: user.critUpgrades || 1,
