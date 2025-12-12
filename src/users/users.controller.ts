@@ -1,24 +1,24 @@
-import { Controller, Post, Body, Req, HttpException, HttpStatus, Get } from '@nestjs/common';
+import { Controller, Post, Req, Get } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
-    @Get('profile') // returns coins, upgrades
+    @Get('profile')
     async getProfile(@Req() req) {
-        const userId = req.user.userId;
-        console.log("Fetching profile for User ID:", userId);
-        return await this.usersService.findUserById(userId);
+        return await this.usersService.findUserById(req.user.userId);
     }
 
     @Post('upgradecrit')
-    async upgradeCrit(@Req() req, @Body() body: { userId: number }) {
-        return this.usersService.upgradeCrit(body.userId);
+    async upgradeCrit(@Req() req) {
+        // ✅ FIX: Read ID from the Token, NOT the Body
+        return this.usersService.upgradeCrit(req.user.userId);
     }
 
     @Post('upgradevalue')
-    async upgradeValue(@Req() req, @Body() body: { userId: number }) {
-        return this.usersService.upgradeValue(body.userId);
+    async upgradeValue(@Req() req) {
+        // ✅ FIX: Read ID from the Token, NOT the Body
+        return this.usersService.upgradeValue(req.user.userId);
     }
 }
