@@ -1,14 +1,14 @@
 import { Controller, Post, Body, Req, HttpException, HttpStatus, Get } from '@nestjs/common';
-import { calculateUpgradeCost, calculateCritValue } from './constants';
 import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
-    @Get('profile') // coins, upgrades
+    @Get('profile') // returns coins, upgrades
     async getProfile(@Req() req) {
-        const userId = req.user.id;
+        const userId = req.user.userId;
+        console.log("Fetching profile for User ID:", userId);
         return await this.usersService.findUserById(userId);
     }
 

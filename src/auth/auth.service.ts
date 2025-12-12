@@ -12,18 +12,14 @@ export class AuthService implements OnModuleInit {
     constructor(private prisma: PrismaService) { }
 
     async onModuleInit() {
-        // 1. Import as 'any' to bypass TS checks
         const imported = await import('@farcaster/auth-client') as any;
 
-        // 2. Extract the factory function
-        // The logs showed 'createAppClient' exists in the exports
         const createAppClient = imported.createAppClient;
 
         if (!createAppClient) {
             throw new Error("Could not find createAppClient function.");
         }
 
-        // 3. ✅ Use the factory function instead of 'new AppClient()'
         this.farcasterClient = createAppClient({
             relayUrl: 'https://relay.farcaster.xyz',
             domain: 'basebackend-production-f4f9.up.railway.app'
