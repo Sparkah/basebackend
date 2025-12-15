@@ -43,6 +43,24 @@ export class NftService {
         this.contractAddress = process.env.CONTRACT_ADDRESS as `0x${string}`;
     }
 
+    async getUserNfts(userId: number) {
+        return await this.prisma.mintedScore.findMany({
+            where: { ownerId: userId },
+            orderBy: { score: 'desc' }
+        });
+    }
+
+    // New Method: Get Global Leaderboard
+    async getNftLeaderboard() {
+        return await this.prisma.mintedScore.findMany({
+            take: 20, // Top 20
+            orderBy: { score: 'desc' },
+            include: {
+                owner: { select: { username: true } }
+            }
+        });
+    }
+
     async isScoreAvailable(score: number): Promise<boolean> {
         try {
             const isMinted = await this.publicClient.readContract({

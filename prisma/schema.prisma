@@ -20,6 +20,7 @@ model User {
   valueUpgrades Int
   currCoins     Int
   ltimeCoins    Int
+  mintedScores MintedScore[]
 }
 
 model Run {
@@ -28,4 +29,13 @@ model Run {
   userId    Int      // Link to User ID instead of wallet string
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model MintedScore {
+  id        Int      @id @default(autoincrement())
+  score     Int      @unique // Score is the TokenID
+  ownerId   Int
+  owner     User     @relation(fields: [ownerId], references: [id])
+  txHash    String
+  mintedAt  DateTime @default(now())
 }

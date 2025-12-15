@@ -15,4 +15,14 @@ export class NftController {
         const userId = req.user.userId; // Securely get ID from token
         return await this.nftService.mintScore(userId, body.score);
     }
+
+    @Get('my-nfts')
+    async getMyNfts(@Req() req) {
+        return await this.nftService.getUserNfts(req.user.userId);
+    }
+
+    @Get('leaderboard')
+    async getLeaderboard() {
+        return await this.nftService.getNftLeaderboard();
+    }
 }
