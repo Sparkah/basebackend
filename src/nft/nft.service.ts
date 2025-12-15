@@ -75,22 +75,64 @@ export class NftService {
         }
     }
 
+    async generateAiImage(score: number): Promise<string | null> {
+        const hfToken = process.env.HF_ACCESS_TOKEN;
+        if (!hfToken) return null;
+
+        try {
+            console.log(`🎨 Generating AI Image for Score ${score}...`);
+
+            // ✅ UPDATED URL: api-inference -> router
+            const response = await fetch(
+                "https://router.huggingface.co/black-forest-labs/FLUX.1-schnell",
+                {
+                    headers: {
+                        Authorization: `Bearer ${hfToken}`,
+                        "Content-Type": "application/json",
+                    },
+                    method: "POST",
+                    body: JSON.stringify({
+                        inputs: `A high quality 8-bit pixel art icon of a golden trophy cup, magical items, game asset, score ${score}, white background`,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                // Log but don't crash
+                console.error("AI Gen Failed:", await response.text());
+                return null;
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+
+        } catch (e) {
+            console.error("AI Generation Error:", e);
+            return null; // Fallback to 🏆
+        }
+    }
+
+    // 2. FIXED: Robust Database Saving
     async mintScore(userId: number, score: number) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
-        if (!user || !user.walletAddress) {
-            throw new BadRequestException("Please connect your wallet first!");
-        }
+        if (!user || !user.walletAddress) throw new BadRequestException("Connect wallet first!");
 
         const available = await this.isScoreAvailable(score);
+
+        // Safety: If blockchain says it's taken, check if WE own it.
+        // If we own it (maybe previous request crashed halfway), we just return success.
         if (!available) {
+            const status = await this.getScoreStatus(score);
+            if (status.owner === user.username) {
+                return { success: true, message: "Already minted by you!" };
+            }
             throw new BadRequestException(`Score ${score} is already minted!`);
         }
 
         try {
             console.log(`Minting Score ${score} to ${user.walletAddress}...`);
 
-            // 1. Mint on Blockchain
             const hash = await this.client.writeContract({
                 address: this.contractAddress,
                 abi: this.abi,
@@ -100,29 +142,32 @@ export class NftService {
 
             console.log(`✅ Blockchain Success! Hash: ${hash}`);
 
-            // 2. SAVE TO DATABASE (This was missing!)
-            await this.prisma.mintedScore.create({
-                data: {
-                    score: score,
-                    ownerId: userId,
-                    txHash: hash
-                }
-            });
-            console.log("✅ Database Success! Saved to Leaderboard.");
-
+            // Generate Image (Non-blocking: if it fails, we still continue)
             const aiImage = await this.generateAiImage(score);
 
-            // --- Updated Save ---
-            await this.prisma.mintedScore.create({
-                data: {
-                    score: score,
-                    ownerId: userId,
-                    txHash: hash, // Use actual hash variable
-                    imageUrl: aiImage // ✅ Save the image!
+            // ✅ SAFE SAVE: Try to save, but ignore if it already exists
+            try {
+                await this.prisma.mintedScore.create({
+                    data: {
+                        score: score,
+                        ownerId: userId,
+                        txHash: hash,
+                        imageUrl: aiImage
+                    }
+                });
+                console.log("✅ Database Success! Saved to Leaderboard.");
+            } catch (dbError: any) {
+                // Ignore P2002 (Unique constraint failed) - It means we already saved it!
+                if (dbError.code === 'P2002') {
+                    console.warn("⚠️ Score already in DB. Skipping save.");
+                } else {
+                    console.error("❌ Database Error:", dbError);
+                    // We do NOT throw here. The user has their NFT, so we return success.
                 }
-            });
+            }
 
             return { success: true, txHash: hash, imageUrl: aiImage };
+
         } catch (error) {
             console.error("Minting failed:", error);
             throw new InternalServerErrorException("Minting failed");
@@ -146,45 +191,5 @@ export class NftService {
                 owner: { select: { username: true } }
             }
         });
-    }
-
-    async generateAiImage(score: number): Promise<string | null> {
-        const hfToken = process.env.HF_ACCESS_TOKEN;
-        if (!hfToken) return null;
-
-        try {
-            console.log(`🎨 Generating AI Image for Score ${score}...`);
-
-            // We use a fast, free model (Flux-schnell or Stable Diffusion)
-            const response = await fetch(
-                "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
-                {
-                    headers: {
-                        Authorization: `Bearer ${hfToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    method: "POST",
-                    body: JSON.stringify({
-                        inputs: `A high quality 8-bit pixel art icon of a golden trophy cup, magical items, game asset, score ${score}, white background`,
-                    }),
-                }
-            );
-
-            if (!response.ok) {
-                console.error("AI Gen Failed:", await response.text());
-                return null;
-            }
-
-            // Convert Blob to Base64
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            const base64 = buffer.toString('base64');
-
-            return `data:image/jpeg;base64,${base64}`;
-
-        } catch (e) {
-            console.error("AI Generation Error:", e);
-            return null; // Fallback to 🏆
-        }
     }
 }
