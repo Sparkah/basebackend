@@ -19,8 +19,12 @@ export class NftService {
 
     constructor(private prisma: PrismaService) {
         // Initialize Viem Client
-        const pk = process.env.PRIVATE_KEY;
+        let pk = process.env.PRIVATE_KEY;
         if (!pk) throw new Error("PRIVATE_KEY missing in .env");
+
+        if (!pk.startsWith('0x')) {
+            pk = `0x${pk}`;
+        }
 
         this.account = privateKeyToAccount(pk as `0x${string}`);
 
