@@ -17,6 +17,7 @@ import { UsersService } from './users/users.service';
 import { UsersModule } from './users/users.module';
 import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { AuthMiddleware } from './auth/auth.middleware';
+import { NftModule } from './nft/nft.module';
 
 @Module({
   imports: [
@@ -24,7 +25,6 @@ import { AuthMiddleware } from './auth/auth.middleware';
       isGlobal: true,
     }),
     ServeStaticModule.forRoot({
-      // This points to the public folder in your project root
       rootPath: join(__dirname, '..', 'public'),
       serveRoot: '/',
     }),
@@ -36,6 +36,7 @@ import { AuthMiddleware } from './auth/auth.middleware';
     RunsModule,
     AuthModule,
     UsersModule,
+    NftModule,
   ],
   controllers: [AppController, RunsController, AuthController, ManifestController, UsersController],
   providers: [AppService, PrismaService, RunsService, AuthService, UsersService],
