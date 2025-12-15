@@ -21,14 +21,14 @@ export class NftService {
         let pk = process.env.PRIVATE_KEY;
         if (!pk) throw new Error("PRIVATE_KEY missing in .env");
 
-        // ✅ 1. Auto-Fix Private Key Format (Solves "invalid private key" error)
+        // ✅ AUTO-FIX: Ensure Private Key starts with 0x
         if (!pk.startsWith('0x')) {
-            console.log("⚠️ Fixing Private Key format (adding 0x)...");
+            console.log("⚠️ Fixing Private Key format...");
             pk = `0x${pk}`;
         }
-
+        
         this.account = privateKeyToAccount(pk as `0x${string}`);
-
+        
         this.client = createWalletClient({
             account: this.account,
             chain: baseSepolia,
@@ -43,24 +43,6 @@ export class NftService {
         this.contractAddress = process.env.CONTRACT_ADDRESS as `0x${string}`;
     }
 
-    async getUserNfts(userId: number) {
-        return await this.prisma.mintedScore.findMany({
-            where: { ownerId: userId },
-            orderBy: { score: 'desc' }
-        });
-    }
-
-    // New Method: Get Global Leaderboard
-    async getNftLeaderboard() {
-        return await this.prisma.mintedScore.findMany({
-            take: 20, // Top 20
-            orderBy: { score: 'desc' },
-            include: {
-                owner: { select: { username: true } }
-            }
-        });
-    }
-
     async isScoreAvailable(score: number): Promise<boolean> {
         try {
             const isMinted = await this.publicClient.readContract({
@@ -69,9 +51,9 @@ export class NftService {
                 functionName: 'isScoreMinted',
                 args: [BigInt(score)]
             });
-            return !isMinted;
+            return !isMinted; 
         } catch (e) {
-            return true; // Assume free if check fails (safest default)
+            return true; // Assume available if check fails
         }
     }
 
@@ -95,11 +77,9 @@ export class NftService {
     }
 
     async mintScore(userId: number, score: number) {
-        // ✅ 2. Graceful Error Handling
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
+        
         if (!user || !user.walletAddress) {
-            console.warn(`User ${userId} tried to mint without a wallet.`);
             throw new BadRequestException("Please connect your wallet first!");
         }
 
@@ -110,6 +90,8 @@ export class NftService {
 
         try {
             console.log(`Minting Score ${score} to ${user.walletAddress}...`);
+            
+            // 1. Mint on Blockchain
             const hash = await this.client.writeContract({
                 address: this.contractAddress,
                 abi: this.abi,
@@ -117,11 +99,41 @@ export class NftService {
                 args: [user.walletAddress as `0x${string}`, BigInt(score)]
             });
 
-            console.log(`✅ Success! Hash: ${hash}`);
+            console.log(`✅ Blockchain Success! Hash: ${hash}`);
+
+            // 2. SAVE TO DATABASE (This was missing!)
+            await this.prisma.mintedScore.create({
+                data: {
+                    score: score,
+                    ownerId: userId,
+                    txHash: hash
+                }
+            });
+            console.log("✅ Database Success! Saved to Leaderboard.");
+
             return { success: true, txHash: hash };
         } catch (error) {
             console.error("Minting failed:", error);
-            throw new InternalServerErrorException("Blockchain transaction failed");
+            throw new InternalServerErrorException("Minting failed");
         }
+    }
+
+    // --- LEADERBOARD METHODS ---
+
+    async getUserNfts(userId: number) {
+        return await this.prisma.mintedScore.findMany({
+            where: { ownerId: userId },
+            orderBy: { score: 'desc' }
+        });
+    }
+
+    async getNftLeaderboard() {
+        return await this.prisma.mintedScore.findMany({
+            take: 20, 
+            orderBy: { score: 'desc' },
+            include: { 
+                owner: { select: { username: true } } 
+            }
+        });
     }
 }
