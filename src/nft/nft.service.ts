@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { createWalletClient, createPublicClient, http, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
@@ -11,18 +11,19 @@ export class NftService {
     private publicClient;
     private contractAddress;
 
-    // Define the Contract Interface
     private abi = parseAbi([
         'function mintScore(address to, uint256 score) external',
-        'function isScoreMinted(uint256 score) external view returns (bool)'
+        'function isScoreMinted(uint256 score) external view returns (bool)',
+        'function ownerOf(uint256 tokenId) external view returns (address)'
     ]);
 
     constructor(private prisma: PrismaService) {
-        // Initialize Viem Client
         let pk = process.env.PRIVATE_KEY;
         if (!pk) throw new Error("PRIVATE_KEY missing in .env");
 
+        // ✅ 1. Auto-Fix Private Key Format (Solves "invalid private key" error)
         if (!pk.startsWith('0x')) {
+            console.log("⚠️ Fixing Private Key format (adding 0x)...");
             pk = `0x${pk}`;
         }
 
@@ -42,9 +43,22 @@ export class NftService {
         this.contractAddress = process.env.CONTRACT_ADDRESS as `0x${string}`;
     }
 
+    async isScoreAvailable(score: number): Promise<boolean> {
+        try {
+            const isMinted = await this.publicClient.readContract({
+                address: this.contractAddress,
+                abi: this.abi,
+                functionName: 'isScoreMinted',
+                args: [BigInt(score)]
+            });
+            return !isMinted;
+        } catch (e) {
+            return true; // Assume free if check fails (safest default)
+        }
+    }
+
     async getScoreStatus(score: number) {
         try {
-            // 1. Ask Blockchain: Who owns this score?
             const ownerAddress = await this.publicClient.readContract({
                 address: this.contractAddress,
                 abi: this.abi,
@@ -52,53 +66,32 @@ export class NftService {
                 args: [BigInt(score)]
             }) as string;
 
-            // 2. Ask Database: Who is this address?
-            // We search case-insensitive because DB might have 0xABC and blockchain returns 0xabc
             const user = await this.prisma.user.findFirst({
-                where: {
-                    walletAddress: { equals: ownerAddress, mode: 'insensitive' }
-                }
+                where: { walletAddress: { equals: ownerAddress, mode: 'insensitive' } }
             });
 
-            return {
-                available: false,
-                owner: user ? user.username : ownerAddress // Return Username or Address if unknown
-            };
-
+            return { available: false, owner: user ? user.username : ownerAddress };
         } catch (e) {
-            // If readContract fails, it usually means the token doesn't exist yet -> Available!
             return { available: true };
         }
     }
 
-    async isScoreAvailable(score: number): Promise<boolean> {
-        // Call the Smart Contract: isScoreMinted(score)
-        const isMinted = await this.publicClient.readContract({
-            address: this.contractAddress,
-            abi: this.abi,
-            functionName: 'isScoreMinted',
-            args: [BigInt(score)]
-        });
-
-        // If isMinted is true, it's NOT available.
-        return !isMinted;
-    }
-
     async mintScore(userId: number, score: number) {
-        // 1. Get User's Wallet
+        // ✅ 2. Graceful Error Handling
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
         if (!user || !user.walletAddress) {
-            throw new Error("User has no wallet linked!");
+            console.warn(`User ${userId} tried to mint without a wallet.`);
+            throw new BadRequestException("Please connect your wallet first!");
         }
 
-        // 2. Double-check availability
         const available = await this.isScoreAvailable(score);
         if (!available) {
-            throw new Error(`Score ${score} is already minted by someone else!`);
+            throw new BadRequestException(`Score ${score} is already minted!`);
         }
 
-        // 3. Send Transaction (Gasless for the user, Backend pays gas)
         try {
+            console.log(`Minting Score ${score} to ${user.walletAddress}...`);
             const hash = await this.client.writeContract({
                 address: this.contractAddress,
                 abi: this.abi,
@@ -106,11 +99,11 @@ export class NftService {
                 args: [user.walletAddress as `0x${string}`, BigInt(score)]
             });
 
-            console.log(`Minted Score ${score} for ${user.username}. Hash: ${hash}`);
+            console.log(`✅ Success! Hash: ${hash}`);
             return { success: true, txHash: hash };
         } catch (error) {
             console.error("Minting failed:", error);
-            throw new InternalServerErrorException("Minting failed on blockchain");
+            throw new InternalServerErrorException("Blockchain transaction failed");
         }
     }
 }
