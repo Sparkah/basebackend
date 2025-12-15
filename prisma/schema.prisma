@@ -33,9 +33,10 @@ model Run {
 
 model MintedScore {
   id        Int      @id @default(autoincrement())
-  score     Int      @unique // Score is the TokenID
+  score     Int      @unique
   ownerId   Int
   owner     User     @relation(fields: [ownerId], references: [id])
   txHash    String
   mintedAt  DateTime @default(now())
+  imageUrl  String?  @db.Text
 }

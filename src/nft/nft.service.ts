@@ -21,14 +21,13 @@ export class NftService {
         let pk = process.env.PRIVATE_KEY;
         if (!pk) throw new Error("PRIVATE_KEY missing in .env");
 
-        // ✅ AUTO-FIX: Ensure Private Key starts with 0x
         if (!pk.startsWith('0x')) {
             console.log("⚠️ Fixing Private Key format...");
             pk = `0x${pk}`;
         }
-        
+
         this.account = privateKeyToAccount(pk as `0x${string}`);
-        
+
         this.client = createWalletClient({
             account: this.account,
             chain: baseSepolia,
@@ -51,7 +50,7 @@ export class NftService {
                 functionName: 'isScoreMinted',
                 args: [BigInt(score)]
             });
-            return !isMinted; 
+            return !isMinted;
         } catch (e) {
             return true; // Assume available if check fails
         }
@@ -78,7 +77,7 @@ export class NftService {
 
     async mintScore(userId: number, score: number) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
-        
+
         if (!user || !user.walletAddress) {
             throw new BadRequestException("Please connect your wallet first!");
         }
@@ -90,7 +89,7 @@ export class NftService {
 
         try {
             console.log(`Minting Score ${score} to ${user.walletAddress}...`);
-            
+
             // 1. Mint on Blockchain
             const hash = await this.client.writeContract({
                 address: this.contractAddress,
@@ -111,7 +110,19 @@ export class NftService {
             });
             console.log("✅ Database Success! Saved to Leaderboard.");
 
-            return { success: true, txHash: hash };
+            const aiImage = await this.generateAiImage(score);
+
+            // --- Updated Save ---
+            await this.prisma.mintedScore.create({
+                data: {
+                    score: score,
+                    ownerId: userId,
+                    txHash: hash, // Use actual hash variable
+                    imageUrl: aiImage // ✅ Save the image!
+                }
+            });
+
+            return { success: true, txHash: hash, imageUrl: aiImage };
         } catch (error) {
             console.error("Minting failed:", error);
             throw new InternalServerErrorException("Minting failed");
@@ -129,11 +140,51 @@ export class NftService {
 
     async getNftLeaderboard() {
         return await this.prisma.mintedScore.findMany({
-            take: 20, 
+            take: 20,
             orderBy: { score: 'desc' },
-            include: { 
-                owner: { select: { username: true } } 
+            include: {
+                owner: { select: { username: true } }
             }
         });
+    }
+
+    async generateAiImage(score: number): Promise<string | null> {
+        const hfToken = process.env.HF_ACCESS_TOKEN;
+        if (!hfToken) return null;
+
+        try {
+            console.log(`🎨 Generating AI Image for Score ${score}...`);
+
+            // We use a fast, free model (Flux-schnell or Stable Diffusion)
+            const response = await fetch(
+                "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell",
+                {
+                    headers: {
+                        Authorization: `Bearer ${hfToken}`,
+                        "Content-Type": "application/json",
+                    },
+                    method: "POST",
+                    body: JSON.stringify({
+                        inputs: `A high quality 8-bit pixel art icon of a golden trophy cup, magical items, game asset, score ${score}, white background`,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                console.error("AI Gen Failed:", await response.text());
+                return null;
+            }
+
+            // Convert Blob to Base64
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64 = buffer.toString('base64');
+
+            return `data:image/jpeg;base64,${base64}`;
+
+        } catch (e) {
+            console.error("AI Generation Error:", e);
+            return null; // Fallback to 🏆
+        }
     }
 }
