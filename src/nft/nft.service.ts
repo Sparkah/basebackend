@@ -78,16 +78,12 @@ export class NftService {
     async generateAiImage(score: number): Promise<string> {
         const hfToken = process.env.HF_ACCESS_TOKEN;
 
-        // Default Fallback: A simple Golden Trophy (Pixel Art)
-        // This ensures we NEVER save a null image.
-        const fallbackImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAAAZklEQVRYhe2WsQ3AMAgF788swSJZMkAGyCBZgklS5QiyI/uC4qtu+uCw+PtCCI+i667A/bIDWAcYwLqA2YAlYC6gC1gLmAJmAusC+wJmAusC+wJmAusC+wJmAusC+wJmAusC+wJ+C9wBAx5fAvWjCngAAAAASUVORK5CYII=";
+        const fallbackImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
         if (!hfToken) return fallbackImage;
 
         try {
             console.log(`🎨 Generating AI Image for Score ${score}...`);
-
-            // ✅ SWITCH to Stable Diffusion v1.5 (Very reliable/fast on free tier)
             const response = await fetch(
                 "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
                 {
@@ -97,14 +93,14 @@ export class NftService {
                     },
                     method: "POST",
                     body: JSON.stringify({
-                        inputs: `pixel art golden trophy cup, score ${score}, white background, 8bit game asset`,
+                        inputs: `pixel art golden trophy cup, score ${score}, white background`,
                     }),
                 }
             );
 
             if (!response.ok) {
-                console.error("AI Gen Failed (Using Fallback):", await response.text());
-                return fallbackImage;
+                console.error("AI Gen Failed:", await response.text());
+                return fallbackImage; // Return safe image on error
             }
 
             const arrayBuffer = await response.arrayBuffer();
