@@ -76,58 +76,38 @@ export class NftService {
     }
 
     async generateAiImage(score: number): Promise<string> {
-        const hfToken = process.env.HF_ACCESS_TOKEN;
+        // Fallback: Red Pixel (Just in case)
         const fallbackImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
-        if (!hfToken) return fallbackImage;
-
         try {
-            console.log(`🎨 Generating AI Image for Score ${score}...`);
+            console.log(`🎨 Generating AI Image via Pollinations for Score ${score}...`);
+            
+            // 1. Construct the Pollinations URL
+            // We use 'pixel art' style to match your game
+            const prompt = `8-bit pixel art golden trophy cup, magical game asset, score ${score}, white background`;
+            const encodedPrompt = encodeURIComponent(prompt);
+            
+            // Pollinations URL pattern: https://image.pollinations.ai/prompt/{prompt}
+            const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=256&height=256&nologo=true`;
 
-            const response = await fetch(
-                "https://router.huggingface.co/black-forest-labs/FLUX.1-schnell",
-                {
-                    headers: {
-                        Authorization: `Bearer ${hfToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    method: "POST",
-                    body: JSON.stringify({
-                        inputs: `pixel art golden trophy cup, score ${score}, white background`,
-                    }),
-                }
-            );
+            // 2. Fetch the Image
+            const response = await fetch(url);
 
             if (!response.ok) {
-                console.error("AI Gen Failed:", await response.text());
+                console.error("Pollinations Failed:", response.statusText);
                 return fallbackImage;
             }
 
-            const contentType = response.headers.get("content-type");
-
-            // ✅ FIX: Actually USE the JSON response
-            if (contentType && contentType.includes("application/json")) {
-                const json = await response.json();
-
-                // Hugging Face Flux often returns: { "images": [ "base64string..." ] }
-                if (json.images && json.images.length > 0) {
-                    return `data:image/jpeg;base64,${json.images[0]}`;
-                }
-
-                // Sometimes it returns error in JSON
-                if (json.error) {
-                    console.error("AI API Error:", json.error);
-                    return fallbackImage;
-                }
-            }
-
-            // Fallback for raw blob responses
+            // 3. Convert to Base64
             const arrayBuffer = await response.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
-            return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+            const base64String = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+            
+            console.log("✅ AI Image Generated Successfully!");
+            return base64String;
 
         } catch (e) {
-            console.error("AI Error:", e);
+            console.error("AI Generation Error:", e);
             return fallbackImage;
         }
     }
