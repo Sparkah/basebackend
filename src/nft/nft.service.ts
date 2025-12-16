@@ -77,15 +77,15 @@ export class NftService {
 
     async generateAiImage(score: number): Promise<string> {
         const hfToken = process.env.HF_ACCESS_TOKEN;
-
         const fallbackImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
         if (!hfToken) return fallbackImage;
 
         try {
             console.log(`🎨 Generating AI Image for Score ${score}...`);
+
             const response = await fetch(
-                "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5",
+                "https://router.huggingface.co/black-forest-labs/FLUX.1-schnell",
                 {
                     headers: {
                         Authorization: `Bearer ${hfToken}`,
@@ -100,9 +100,28 @@ export class NftService {
 
             if (!response.ok) {
                 console.error("AI Gen Failed:", await response.text());
-                return fallbackImage; // Return safe image on error
+                return fallbackImage;
             }
 
+            const contentType = response.headers.get("content-type");
+
+            // ✅ FIX: Actually USE the JSON response
+            if (contentType && contentType.includes("application/json")) {
+                const json = await response.json();
+
+                // Hugging Face Flux often returns: { "images": [ "base64string..." ] }
+                if (json.images && json.images.length > 0) {
+                    return `data:image/jpeg;base64,${json.images[0]}`;
+                }
+
+                // Sometimes it returns error in JSON
+                if (json.error) {
+                    console.error("AI API Error:", json.error);
+                    return fallbackImage;
+                }
+            }
+
+            // Fallback for raw blob responses
             const arrayBuffer = await response.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             return `data:image/jpeg;base64,${buffer.toString('base64')}`;

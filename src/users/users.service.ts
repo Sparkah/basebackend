@@ -29,7 +29,7 @@ export class UsersService {
             throw new Error('User not found');
         }
 
-        const currentCritLevel = user.critUpgrades || 1;
+        const currentCritLevel = user.critUpgrades || 0;
         const upgradeCost = calculateUpgradeCost(currentCritLevel, 'crit');
 
         if (user.currCoins < upgradeCost) {
@@ -58,7 +58,7 @@ export class UsersService {
             throw new Error('User not found');
         }
 
-        const currentValueLevel = user.valueUpgrades || 1;
+        const currentValueLevel = user.valueUpgrades || 0;
         const upgradeCost = calculateUpgradeCost(currentValueLevel, 'tap');
 
         if (user.currCoins < upgradeCost) {
