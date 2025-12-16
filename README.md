@@ -1,98 +1,67 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+Base Clicker Mini App
+A fast-paced casual clicker game built as a Base Mini App. Players compete for high scores and can mint their achievements as unique, AI-generated NFTs directly to their Base wallet—gas-free.
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Features
+* Native Base Integration: Connects seamlessly using the Farcaster/Base Mini App SDK.
+* Gasless Minting: Users don't pay gas; the game server handles the transaction.
+* AI-Generated Rewards: Every minted score generates a unique pixel-art trophy using Generative AI.
+* On-Chain Leaderboard: View top players and their minted NFTs directly in the game.
+* Anti-Cheat: Backend verification ensures only valid runs are minted.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Tech Stack
+* Frontend: Cocos Creator 3.8 (TypeScript) https://github.com/Sparkah/basehackathon/tree/main
+* Backend: NestJS, Prisma ORM, PostgreSQL (this repository)
+* Blockchain: Solidity (Hardhat), Viem https://github.com/Sparkah/baseNFT#
+* AI: Pollinations.ai / Stable Diffusion
 
-## Description
+Setup Instructions
+1. Prerequisites
+* Node.js (v18+)
+* NPM or Yarn
+* Cocos Creator 3.8+
+* PostgreSQL Database
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+2. Smart Contract Deployment
+Bash
 
-## Project setup
+cd smart-contracts
+npm install
+npx hardhat compile
 
-```bash
-$ npm install
-```
+# Deploy to Base Sepolia
+npx hardhat run scripts/deploy.ts --network base-sepolia
+# Copy the printed Contract Address!
 
-## Compile and run the project
+3. Backend Setup
+Bash
 
-```bash
-# development
-$ npm run start
+cd base-backend
+npm install
 
-# watch mode
-$ npm run start:dev
+# Create a .env file
+cp .env.example .env
 
-# production mode
-$ npm run start:prod
-```
+Configure .env:
+DATABASE_URL="postgresql://user:pass@localhost:5432/mydb"
+PRIVATE_KEY="YOUR_WALLET_PRIVATE_KEY" (Must have Eth on Base Sepolia)
+CONTRACT_ADDRESS="ADDRESS_FROM_STEP_2"
+HF_ACCESS_TOKEN="OPTIONAL_IF_USING_HUGGINGFACE"
 
-## Run tests
+Run Server:
+Bash
 
-```bash
-# unit tests
-$ npm run test
+# Push schema to DB
+npx prisma db push
+# Start Server
+npm run start:dev
 
-# e2e tests
-$ npm run test:e2e
+4. Frontend (Game) Setup
+1. Open project in Cocos Creator.
+2. Open assets/scripts/apiClient.ts and update BaseUrl to your local or deployed backend URL.
+3. Run: Click the "Play" button in Cocos editor.
 
-# test coverage
-$ npm run test:cov
-```
+Wallet Connection: The game uses sdk.actions.signIn() to authenticate. In the editor, this is mocked; in the real app, it triggers the native Base wallet slide-up.
+Minting Flow: The "Mint" button is only active for new high scores. It triggers a backend POST request. The backend validates the score, mints on-chain, generates the AI image, and saves the metadata.
+AI Fallback: If the AI service is overloaded, the system gracefully falls back to a default pixel-art trophy to ensure the user still receives their NFT.
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+[MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
