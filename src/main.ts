@@ -13,7 +13,7 @@ async function bootstrap() {
   
   app.enableCors({
     origin: [
-      'https://f2b8f313.basefrontendbuild.pages.dev/',
+      'https://f2b8f313.basefrontendbuild.pages.dev',
       'http://localhost:7456',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
